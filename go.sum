@@ -1,2 +1,4 @@
 github.com/go-cmd/cmd v1.4.1 h1:JUcEIE84v8DSy02XTZpUDeGKExk2oW3DA10hTjbQwmc=
 github.com/go-cmd/cmd v1.4.1/go.mod h1:tbBenttXtZU4c5djS1o7PWL5pd2xAr5sIqH1kGdNiRc=
+github.com/waringer/broadlink v0.0.0-20200519112725-9d6b5dfd18b6 h1:+0za6wfuCpjp0jov99bM0+UFq9dT7/X0kAmIN4HIwto=
+github.com/waringer/broadlink v0.0.0-20200519112725-9d6b5dfd18b6/go.mod h1:aRll0p5j31YMKMRxk3du1wzVUZ1fU7NtLtorug0gUsc=
