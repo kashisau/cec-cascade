@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 
+	"github.com/joho/godotenv"
 	"github.com/kashisau/cec-cascade/devices"
 )
 
@@ -24,7 +26,10 @@ var roonStateChar = OFF_SYMBOL
 var airplayStateChar = OFF_SYMBOL
 
 func main() {
-
+	envErr := godotenv.Load()
+	if envErr != nil {
+		log.Fatal("Error loading .env file")
+	}
 	// Sound state channels
 	soundStatus := make(chan bool)
 	go devices.WatchSoundOutput(soundStatus)
@@ -42,6 +47,9 @@ func main() {
 			roonStateChar = OFF_SYMBOL
 			if soundOn {
 				roonStateChar = ON_SYMBOL
+				devices.TurnKioskOn()
+			} else {
+				devices.TurnKioskOff()
 			}
 
 		case tvStatusUpdate := <-tvStatus:
@@ -63,6 +71,6 @@ func main() {
 			airplayStateChar = ON_SYMBOL
 		}
 		fmt.Printf("Updating source: TV %s\tRoon %s\tAirPlay %s\n", tvStateChar, roonStateChar, airplayStateChar)
-		devices.SendIRCommand(sourceSignal)
+		go devices.SendIRCommand(sourceSignal)
 	}
 }
