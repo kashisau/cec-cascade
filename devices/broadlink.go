@@ -1,13 +1,9 @@
 package devices
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +11,8 @@ import (
 )
 
 const TEMPERATURE_CADENCE = 5 * time.Second
+
+var TARGET_BROADLINK_MAC = os.Getenv("TARGET_BROADLINK_MAC")
 
 type BroadlinkDevice struct {
 	Type string
@@ -36,93 +34,23 @@ func DiscoverBroadlinkIRDevice() {
 	for _, stdOutLine := range discoverCmdResult.Stdout {
 		matches := broadlinkDeviceArgsRegex.FindStringSubmatch(stdOutLine)
 		if len(matches) == 4 {
+			if matches[3] != TARGET_BROADLINK_MAC {
+				// Skip this device
+				continue
+			}
+
 			foundDevice = BroadlinkDevice{
 				Type: matches[1],
 				Host: matches[2],
 				Mac:  matches[3],
 			}
 			broadlinkDevArgs = strings.Fields(fmt.Sprintf(`--type %s --host %s --mac %s`, foundDevice.Type, foundDevice.Host, foundDevice.Mac))
-			go TrackTemprature()
+			return
 		}
 	}
-}
 
-type TemperatureSample struct {
-	SampleTime   int64   `json:"sample_time"`
-	DeviceName   string  `json:"device_name"`
-	SampledValue float64 `json:"sampled_value"`
-}
-
-type TemperatureSamples struct {
-	Samples []TemperatureSample `json:"samples"`
-}
-
-func TrackTemprature() {
-	cadence := time.NewTicker(TEMPERATURE_CADENCE)
-	for range cadence.C {
-		currentTemp := <-GetTemperature()
-		currentTime := time.Now()
-		sample := TemperatureSample{
-			SampleTime:   currentTime.Unix(),
-			DeviceName:   foundDevice.Mac,
-			SampledValue: currentTemp,
-		}
-		samples := TemperatureSamples{
-			Samples: []TemperatureSample{sample},
-		}
-		samplesJson, err := json.Marshal(samples)
-		if err != nil {
-			fmt.Println("Error marshalling JSON for temperature reading")
-		}
-		go postTemperature(samplesJson)
-	}
-}
-
-func postTemperature(samplesJson []byte) chan bool {
-	TEMPERATURE_REPORT_URL := os.Getenv("TEMPERATURE_REPORT_URL")
-	TEMPERATURE_REPORT_TOKEN := os.Getenv("TEMPERATURE_REPORT_TOKEN")
-
-	responded := make(chan bool)
-	request, _ := http.NewRequest("POST", TEMPERATURE_REPORT_URL, bytes.NewBuffer(samplesJson))
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", TEMPERATURE_REPORT_TOKEN))
-	request.Header.Set("Content-Type", "application/json")
-
-	httpClient := &http.Client{}
-	go func() {
-		response, err := httpClient.Do(request)
-		if err != nil {
-			panic(err)
-		}
-		defer response.Body.Close()
-
-		if response.StatusCode != 200 {
-			fmt.Printf("Temperature sample failed to upload. Error: %d: %s\n", response.StatusCode, response.Status)
-			responded <- false
-		} else {
-			responded <- true
-		}
-	}()
-	return responded
-}
-
-func GetTemperature() chan float64 {
-	tempReturn := make(chan float64)
-	go func() {
-		broadlinkCliTemperatureString := append(broadlinkDevArgs, "--temperature")
-		broadlinkCliTemperatureCmd := cmd.NewCmd("broadlink_cli", broadlinkCliTemperatureString...)
-		broadlinkCliTemperatureResult := <-broadlinkCliTemperatureCmd.Start()
-		if len(broadlinkCliTemperatureResult.Stderr) > 0 {
-			fmt.Println("ERROR: Could not read temprature.")
-			fmt.Println(broadlinkCliTemperatureResult.Stderr)
-		}
-		tempString := broadlinkCliTemperatureResult.Stdout[0]
-		value, err := strconv.ParseFloat(tempString, 64)
-		if err != nil {
-			fmt.Println("Could not get a temperature reading.")
-		}
-		tempReturn <- float64(value)
-	}()
-	return tempReturn
+	fmt.Printf("Could not find the target Broadlink device with machine ID '%s'.", TARGET_BROADLINK_MAC)
+	panic("No Broadlink device to control.")
 }
 
 func SendIRCommand(sendValue string) {
@@ -132,5 +60,6 @@ func SendIRCommand(sendValue string) {
 	if len(sendCmdResult.Stderr) > 0 {
 		fmt.Println("ERROR: Could not send command.")
 		fmt.Println(sendCmdResult.Stderr)
+		panic("We need to find the Broadlink device again!")
 	}
 }

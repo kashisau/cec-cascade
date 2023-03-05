@@ -16,7 +16,7 @@ func sendCommand(commandUrl string) {
 }
 
 func TurnKioskOn() {
-	KIOSK_IP := os.Getenv("KISOK_IP")
+	KIOSK_IP := os.Getenv("KIOSK_IP")
 	KIOSK_PASSWORD := os.Getenv("KIOSK_PASSWORD")
 
 	screensaverOffUrl := fmt.Sprintf(KIOSK_COMMAND_TEMPLATE, KIOSK_IP, "stopDaydream", KIOSK_PASSWORD)
@@ -24,7 +24,7 @@ func TurnKioskOn() {
 }
 
 func TurnKioskOff() {
-	KIOSK_IP := os.Getenv("KISOK_IP")
+	KIOSK_IP := os.Getenv("KIOSK_IP")
 	KIOSK_PASSWORD := os.Getenv("KIOSK_PASSWORD")
 
 	screensaverOnUrl := fmt.Sprintf(KIOSK_COMMAND_TEMPLATE, KIOSK_IP, "startDaydream", KIOSK_PASSWORD)
