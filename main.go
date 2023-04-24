@@ -42,14 +42,12 @@ func main() {
 	// Check the channel values until termination
 	for {
 		select {
+
 		case soundStatusUpdate := <-soundStatus:
 			soundOn = soundStatusUpdate
 			roonStateChar = OFF_SYMBOL
 			if soundOn {
 				roonStateChar = ON_SYMBOL
-				devices.TurnKioskOn()
-			} else {
-				devices.TurnKioskOff()
 			}
 
 		case tvStatusUpdate := <-tvStatus:
@@ -61,15 +59,19 @@ func main() {
 		}
 
 		airplayStateChar = OFF_SYMBOL
-
 		sourceSignal := SOURCE_AIRPLAY
+
 		if tvOn {
 			sourceSignal = SOURCE_TV
+			devices.TurnKioskOff()
 		} else if soundOn {
 			sourceSignal = SOURCE_ROON
+			devices.TurnKioskOn()
 		} else {
 			airplayStateChar = ON_SYMBOL
+			devices.TurnKioskOn()
 		}
+
 		fmt.Printf("Updating source: TV %s\tRoon %s\tAirPlay %s\n", tvStateChar, roonStateChar, airplayStateChar)
 		go devices.SendIRCommand(sourceSignal)
 	}
