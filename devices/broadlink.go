@@ -12,8 +12,6 @@ import (
 
 const TEMPERATURE_CADENCE = 5 * time.Second
 
-var TARGET_BROADLINK_MAC = os.Getenv("TARGET_BROADLINK_MAC")
-
 type BroadlinkDevice struct {
 	Type string
 	Host string
@@ -24,7 +22,11 @@ var foundDevice BroadlinkDevice
 var broadlinkDevArgs []string
 var broadlinkDeviceArgsRegex, _ = regexp.Compile(`\#\sbroadlink_cli\s--type\s(0x[0-9a-f]+)\s--host\s([0-9\.]+)\s--mac\s([0-9a-f]+)`)
 
+// DiscoverBroadlinkIRDevice is responsible for discovering a specific Broadlink IR device and populating
+// the necessary information about that device. It utilizes an external command-line tool called
+// "broadlink_discovery" to perform the device discovery.
 func DiscoverBroadlinkIRDevice() {
+	TARGET_BROADLINK_MAC := os.Getenv("TARGET_BROADLINK_MAC")
 	discoverCmd := cmd.NewCmd("broadlink_discovery")
 	discoverCmdResult := <-discoverCmd.Start()
 	if len(discoverCmdResult.Stderr) > 0 {
@@ -50,9 +52,13 @@ func DiscoverBroadlinkIRDevice() {
 	}
 
 	fmt.Printf("Could not find the target Broadlink device with machine ID '%s'.", TARGET_BROADLINK_MAC)
+
+	// Intentional panic. The service manager should re-start this executable to reinitialise.
 	panic("No Broadlink device to control.")
 }
 
+// SendIRCommand sends an IR command using a Broadlink device. It executes the command-line tool "broadlink_cli"
+// with the provided sendValue, handling any errors and triggering a panic to signal the need for device re-discovery.
 func SendIRCommand(sendValue string) {
 	broadlinkCliCmdString := append(broadlinkDevArgs, "--send", sendValue)
 	sendCmd := cmd.NewCmd("broadlink_cli", broadlinkCliCmdString...)
@@ -60,6 +66,8 @@ func SendIRCommand(sendValue string) {
 	if len(sendCmdResult.Stderr) > 0 {
 		fmt.Println("ERROR: Could not send command.")
 		fmt.Println(sendCmdResult.Stderr)
+
+		// Intentional panic. The service manager should re-start this executable to reinitialise.
 		panic("We need to find the Broadlink device again!")
 	}
 }
